@@ -1,0 +1,59 @@
+Step 1 — Show the Input
+"Let me start by showing the input to this simulation. We have a network of four nodes — A, B, C, and D. Each link is defined with two values: capacity, the maximum traffic it can handle, and weight, the routing cost. On top of that, we have a demand matrix — this tells us who wants to send traffic to whom, and how much."
+
+Step 2 — Show the Output
+"Now let's look at the output. After running the simulation, we get a table showing each link's usage, capacity, and utilization. The table is sorted from highest to lowest utilization, so the most stressed links appear at the top. For example, B→D shows a utilization of 1.4 — meaning it is carrying 40% more traffic than it was designed to handle."
+
+Step 3 — Explain "Critical Scenario"
+"Now, what exactly is a critical scenario?"
+"In the double-link failure analysis, we test every possible combination of two links failing at the same time. Among all those combinations, we flag a scenario as critical if either of two conditions is met."
+"First — if a demand becomes unreachable. This means there is simply no path left in the network to deliver that traffic. In a real network, this would be a complete service outage for that flow."
+"Second — if the maximum utilization of any remaining link exceeds 100%. This means the network is still connected, but at least one link is overloaded beyond its capacity — leading to packet loss and degraded performance."
+"So a critical scenario is essentially any failure combination that either breaks connectivity or causes overload. These are the cases a network engineer must design against."
+
+=========================================
+How does ECMP help? (EMCP 역할)
+Splits traffic across equal-cost paths, preventing concentration
+동일 비용 경로가 여러개일 때 트래픽을 나눠서 집중 현상 완화
+
+Why did you use a directed graph instead of an undirected graph?( 왜 방향성 그래프 사용했는지)
+Because in real networks, links in opposite directions can have different capacities or cost.
+
+What algorithm does nx.shortest_path use iternally? (nx.shortest_path가 무슨 알고리즘 쓰는지)
+It uses Dijkstra's algorithm, which finds the path with the minimum total weight from source to destination.
+
+What are the limitations of shortest-path routing in this simulation? (최단거리 라우팅의 한계)
+It doesn't account for current congestion. The path is chosen based on static weights only, so it can still route traffic onto an already overloaded link.
+
+Why does B->D already show 140% utilization before any failure? (왜 B->D 경로가 140% 사용률인지)
+Because all four demands happen to route through B, and three of them continue to D. That puts 7 on a 5 link, resulting in 140% utilization
+
+Does increasing the weight of B->D fully solve the congestion problem? (B->D 경로 가중치를 높이는 것만으로 문제 해결되는지)
+It helps redistribute traffic, but whether it fully resolves the issue depends on the new maximum utilization after rerouting. The simulation shows improvement, but the network may still have bottlenecks
+
+Why does removing B->D actually reduce the maximum utilization? (왜 B->D 경로 삭제가 사용률을 줄여주는지)
+Without B->D, traffic is forced to reroute through C->D, which has higher capacity. This spreads the load more evenly and reduces the peak utilization.
+
+How do you define a critical scenario in double-link failures? (double failure에서 critical scenario 가 뭔지)
+A scenario is critical if at least one demand becomes unreachable, or if any remaining link's utilization exceeds 100%
+
+
+
+================================
+We define the network topology. We created a directed graph using NetworkX, and add links with two attributes each - capacity and weight. Capacity represents the maximum bandwidth the link can carry, and weight is the routing cost used by the shortest path algorithm. We also define the demand matrix, which specifies who sends how much traffic to whom.
+
+This section contains the core routing logic. The route_demands function iterates over each demand and finds the shortest path using Dijkstra's algorithm. In default mode, all traffic follows a single shortest path. In ECMP mode, if multiple equal-cost paths exist, the traffic is split evenly across all of them. As each demand is routed, the usage value on every link along the path is incremented accordingly.
+
+The compute_utilization function calculates the utilization of each link by dividing its current usage by its capacity. A value of 1.0 means the link is at full capacity, and anything above 1.0 means it is over capacity. The results are sorted in descending order, so the most congested links appear at the top
+
+The draw_graph function visualizes the network using matplotlib. Each node is drawn with its label, and each link is annotated with its current usage over capacity. This makes it easy to visually identify congested links at a glance.
+
+Here the simulation is operated with original weights. The results show that the B->D link has a utilization of 1.4, which means it is already over capacity in the baseline state. This is because all traffic flows converge onto the path through B, overloading that single link.
+
+To reduce congestion, we increase the weight of B->D from 2 to 5. This makes the path through C more cost-effective, so the routing algorithm redirects some traffic onto the C-<D link. After this adjustment, the maximum utilization drops.
+
+This section simulates link failure scenarios. For single-link failures, we remove each link one at a time, re-run the routing, and record the maximum utilization. If a demand becomes unreachable due to the failure, it is flagged separately. The worst-case failure link is defined as the one whose removal results in the highest maximum utilization across the remaining network. For double-link failures, we use itertools.combinations to test every possible pair of failed links,  and identify critical scenarios (cases where demand becomes unreachable or utilization exceeds 100%)
+
+Finally, we print a summary of all results - the baseline maximum utilization, the number of single and double failure scenarios tested, how many caused unreachable demands, and how many were classified as critical. 
+
+
